@@ -8,7 +8,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class PetInfoResponse {
     private String id;
-    private String image_url;
+    private String profileImageKey;
     private String name;
     private Integer age;
     private String species;
