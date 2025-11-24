@@ -2,8 +2,8 @@ package com.petstarproject.petstar.controller;
 
 import com.petstarproject.petstar.dto.PetInfoResponse;
 import com.petstarproject.petstar.dto.RegisterRequest;
-import com.petstarproject.petstar.enums.Gender;
 import com.petstarproject.petstar.service.PetService;
+import entity.Pet;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,20 +17,22 @@ public class PetController {
     private final PetService petService;
 
     @Autowired
-    public PetController(PetService petService) {
-        this.petService = petService;
+    public PetController(PetService petServiceImpl) {
+        this.petService = petServiceImpl;
     }
 
 
     @GetMapping("/pet/{id}")
     public ResponseEntity<?> getPet(@PathVariable String id) {
-        PetInfoResponse res = new PetInfoResponse("id", "image_url", "name", 0, "species", Gender.MALE, "bio");
+        Pet pet = petService.getPet(id);
+        PetInfoResponse res = new PetInfoResponse(pet.getId(), pet.getProfileImageKey(), pet.getName(), pet.getAge(), pet.getSpecies(), pet.getGender(), pet.getBio());
         return ResponseEntity.ok(res);
     }
 
     @PostMapping(value = "/pet", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> registerPet(@RequestPart("data") RegisterRequest request,
                                          @RequestPart("image") MultipartFile image) {
+
         return ResponseEntity.ok("동물 등록 성공:");
     }
 
