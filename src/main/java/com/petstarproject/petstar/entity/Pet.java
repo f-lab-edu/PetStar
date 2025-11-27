@@ -1,4 +1,4 @@
-package entity;
+package com.petstarproject.petstar.entity;
 
 
 import com.petstarproject.petstar.enums.Gender;

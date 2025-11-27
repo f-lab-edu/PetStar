@@ -1,16 +1,18 @@
 package com.petstarproject.petstar.repository;
 
-import entity.Pet;
+import com.petstarproject.petstar.entity.Pet;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
-public interface PetRepository {
+public interface PetRepository{
 
     void save(Pet pet);
 
-    Pet searchById(String id);
+    Optional<Pet> findById(String id);
 
     void updateById(String id, Pet pet);
 
-    void deleteById(String id);
+    void delete(Pet pet);
 }

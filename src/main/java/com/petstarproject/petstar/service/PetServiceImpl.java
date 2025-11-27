@@ -2,8 +2,9 @@ package com.petstarproject.petstar.service;
 
 import com.petstarproject.petstar.dto.RegisterRequest;
 import com.petstarproject.petstar.repository.PetRepository;
-import entity.Pet;
-import entity.User;
+import com.petstarproject.petstar.entity.Pet;
+import com.petstarproject.petstar.entity.User;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,7 +23,8 @@ public class PetServiceImpl implements PetService {
 
     @Override
     public Pet getPet(String id) {
-        return petRepository.searchById(id);
+        return petRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Pet not found: " + id));
     }
 
     @Override
@@ -36,7 +38,7 @@ public class PetServiceImpl implements PetService {
 
     @Override
     public void updatePet(String id, RegisterRequest request, MultipartFile image) {
-        Pet pet = petRepository.searchById(id);
+        Pet pet = petRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Pet not found: " + id));
         pet.setName(request.getName());
         pet.setAge(request.getAge());
         pet.setSpecies(request.getSpecies());
@@ -48,6 +50,9 @@ public class PetServiceImpl implements PetService {
 
     @Override
     public void deletePet(String id) {
-        petRepository.deleteById(id);
+        Pet pet = petRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Pet not found:" + id));
+        // 검증로직?
+        petRepository.delete(pet);
     }
 }

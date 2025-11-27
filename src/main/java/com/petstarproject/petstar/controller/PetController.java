@@ -3,7 +3,7 @@ package com.petstarproject.petstar.controller;
 import com.petstarproject.petstar.dto.PetInfoResponse;
 import com.petstarproject.petstar.dto.RegisterRequest;
 import com.petstarproject.petstar.service.PetService;
-import entity.Pet;
+import com.petstarproject.petstar.entity.Pet;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
