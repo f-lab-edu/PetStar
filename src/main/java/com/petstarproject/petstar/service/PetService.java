@@ -1,8 +1,8 @@
 package com.petstarproject.petstar.service;
 
 import com.petstarproject.petstar.dto.RegisterRequest;
-import entity.Pet;
-import entity.User;
+import com.petstarproject.petstar.entity.Pet;
+import com.petstarproject.petstar.entity.User;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface PetService {
