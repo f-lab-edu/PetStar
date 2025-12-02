@@ -2,7 +2,6 @@ package com.petstarproject.petstar.service;
 
 import com.petstarproject.petstar.dto.RegisterRequest;
 import com.petstarproject.petstar.entity.Pet;
-import com.petstarproject.petstar.entity.User;
 import com.petstarproject.petstar.enums.Gender;
 import com.petstarproject.petstar.repository.PetRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -19,7 +18,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -67,11 +65,11 @@ public class PetServiceTest {
     void registerPet_success() {
         //given
         RegisterRequest req = new RegisterRequest("삐삐", 1, "Cat", Gender.FEMALE, "시크한 고양이");
-        User user = new User("user1", "test@email.com", "user1", "안녕하세요");
+        String id = "test_id";
         MultipartFile file = mock(MultipartFile.class);
 
         //when
-        petService.registerPet(req, file, user);
+        petService.registerPet(req, file, id);
 
         //then
         verify(petRepository).save(any(Pet.class));
@@ -97,7 +95,9 @@ public class PetServiceTest {
         assertThat(pet.getSpecies()).isEqualTo("Cat");
         assertThat(pet.getGender()).isEqualTo(Gender.FEMALE);
         assertThat(pet.getBio()).isEqualTo("시크한 고양이");
-        verify(petRepository).updateById(eq(id), eq(pet));
+
+        verify(petRepository, times(1)).findById(id);
+        verify(petRepository, never()).save(any());
     }
 
     @Test
@@ -113,9 +113,8 @@ public class PetServiceTest {
         // when & then
         assertThrows(EntityNotFoundException.class, () -> petService.updatePet(id, req, file));
 
-        verify(petRepository).findById(id);
-
-        verify(petRepository, never()).updateById(anyString(), any(Pet.class));
+        verify(petRepository, times(1)).findById(id);
+        verify(petRepository, never()).save(any());
     }
 
     @Test
