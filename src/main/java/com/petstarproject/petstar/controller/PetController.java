@@ -1,50 +1,60 @@
 package com.petstarproject.petstar.controller;
 
+import com.petstarproject.petstar.dto.MessageResponse;
 import com.petstarproject.petstar.dto.PetInfoResponse;
 import com.petstarproject.petstar.dto.RegisterRequest;
+import com.petstarproject.petstar.dto.RegisterRequestJsonMapper;
 import com.petstarproject.petstar.service.PetService;
 import com.petstarproject.petstar.entity.Pet;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping
+@RequestMapping("api/pets")
 public class PetController {
 
     private final PetService petService;
+    private final RegisterRequestJsonMapper registerRequestJsonMapper;
 
     @Autowired
-    public PetController(PetService petServiceImpl) {
+    public PetController(PetService petServiceImpl, RegisterRequestJsonMapper registerRequestJsonMapper) {
         this.petService = petServiceImpl;
+        this.registerRequestJsonMapper = registerRequestJsonMapper;
     }
 
 
-    @GetMapping("/pet/{id}")
+    @GetMapping("/{id}")
     public ResponseEntity<?> getPet(@PathVariable String id) {
         Pet pet = petService.getPet(id);
-        PetInfoResponse res = new PetInfoResponse(pet.getId(), pet.getProfileImageKey(), pet.getName(), pet.getAge(), pet.getSpecies(), pet.getGender(), pet.getBio());
-        return ResponseEntity.ok(res);
+        return ResponseEntity.ok(PetInfoResponse.from(pet));
     }
 
-    @PostMapping(value = "/pet", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> registerPet(@RequestPart("data") RegisterRequest request,
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> registerPet(@RequestPart("data") String jsonRequest,
                                          @RequestPart("image") MultipartFile image) {
-
-        return ResponseEntity.ok("동물 등록 성공:");
+        // form data로 받아야해서 "data" 부분을 plainText로 인식해 json mapper 추가
+        RegisterRequest request = registerRequestJsonMapper.fromJson(jsonRequest);
+        // TODO: 인증 기능 연동 후 실제 로그인 유저 ID 사용
+        petService.registerPet(request, image, "dummyId");
+        return ResponseEntity.status(HttpStatus.CREATED).body(new MessageResponse("동물 등록 성공"));
     }
 
-    @PutMapping(value = "/pet/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updatePet(@PathVariable String id,
-                                       @RequestPart RegisterRequest request,
-                                       @RequestPart MultipartFile image) {
-        return ResponseEntity.ok("정보 수정 완료");
+                                       @RequestPart("data") String jsonRequest,
+                                       @RequestPart("image") MultipartFile image) {
+        RegisterRequest request = registerRequestJsonMapper.fromJson(jsonRequest);
+        petService.updatePet(id, request, image);
+        return ResponseEntity.ok(new MessageResponse("동물 정보 수정 완료"));
     }
 
-    @DeleteMapping("/pet/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<?> deletePet(@PathVariable String id) {
-        return ResponseEntity.ok("동물 삭제 완료");
+        petService.deletePet(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

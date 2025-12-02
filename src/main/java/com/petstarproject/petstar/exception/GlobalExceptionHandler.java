@@ -15,5 +15,11 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(e.getMessage(), HttpStatus.NOT_FOUND.value()));
     }
 
-    public record ErrorResponse(String message, int status) {}
+    @ExceptionHandler(JsonConverException.class)
+    public ResponseEntity<ErrorResponse> handleJsonConvertException(JsonConverException e) {
+        return ResponseEntity.badRequest().body(new ErrorResponse("잘못된 요청 형식입니다.", 400));
+    }
+
+    public record ErrorResponse(String message, int status) {
+    }
 }
