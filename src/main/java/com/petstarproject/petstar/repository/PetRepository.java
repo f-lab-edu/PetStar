@@ -6,13 +6,4 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PetRepository extends JpaRepository<Pet, String> {
-//    jpa 기본제공 메서드
-//
-//    void save(Pet pet);
-//
-//    Optional<Pet> findById(String id);
-//
-//    void updateById(String id, Pet pet);
-//
-//    void delete(Pet pet);
 }

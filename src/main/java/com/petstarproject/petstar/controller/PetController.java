@@ -34,21 +34,21 @@ public class PetController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> registerPet(@RequestPart("data") String jsonRequest,
+    public ResponseEntity<?> registerPet(@RequestPart("data") String request,
                                          @RequestPart("image") MultipartFile image) {
         // form data로 받아야해서 "data" 부분을 plainText로 인식해 json mapper 추가
-        RegisterRequest request = registerRequestJsonMapper.fromJson(jsonRequest);
+        RegisterRequest registerRequest = registerRequestJsonMapper.fromJson(request);
         // TODO: 인증 기능 연동 후 실제 로그인 유저 ID 사용
-        petService.registerPet(request, image, "dummyId");
+        petService.registerPet(registerRequest, image, "dummyId");
         return ResponseEntity.status(HttpStatus.CREATED).body(new MessageResponse("동물 등록 성공"));
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updatePet(@PathVariable String id,
-                                       @RequestPart("data") String jsonRequest,
+                                       @RequestPart("data") String request,
                                        @RequestPart("image") MultipartFile image) {
-        RegisterRequest request = registerRequestJsonMapper.fromJson(jsonRequest);
-        petService.updatePet(id, request, image);
+        RegisterRequest registerRequest = registerRequestJsonMapper.fromJson(request);
+        petService.updatePet(id, registerRequest, image);
         return ResponseEntity.ok(new MessageResponse("동물 정보 수정 완료"));
     }
 
