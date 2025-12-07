@@ -46,8 +46,6 @@ public class PetServiceImpl implements PetService {
         pet.setSpecies(request.getSpecies());
         pet.setGender(request.getGender());
         pet.setBio(request.getBio());
-//        jpa에서 find 후 setter만 호출되어도 자동으로 update되어서 필요 없어짐
-//        petRepository.updateById(id, pet);
     }
 
     @Transactional
