@@ -15,10 +15,12 @@ import java.util.UUID;
 public class PetServiceImpl implements PetService {
 
     private final PetRepository petRepository;
+    private final FileStorageService fileStorageService;
 
     @Autowired
-    public PetServiceImpl(PetRepository petRepository) {
+    public PetServiceImpl(PetRepository petRepository, FileStorageService fileStorageService) {
         this.petRepository = petRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     @Override
@@ -30,17 +32,53 @@ public class PetServiceImpl implements PetService {
     @Transactional
     @Override
     public void registerPet(RegisterRequest request, MultipartFile image, String userId) {
-        UUID UUid = UUID.randomUUID();
-        String id = UUid.toString();
-        Pet pet = new Pet(id, userId, request.getName(), request.getAge(),
-                request.getSpecies(), request.getGender(), request.getBio(), "s3_image_key", 0);
+        String petId = UUID.randomUUID().toString();
+
+        String profileImageKey = null; // todo: 디폴트 이미지?
+
+        if (image != null && !image.isEmpty()) {
+            String imageKey = String.format(
+                    "pets/%s/profile/%s",
+                    petId,
+                    UUID.randomUUID()
+            );
+
+            profileImageKey = fileStorageService.upload(image, imageKey);
+        }
+
+        Pet pet = new Pet(
+                petId,
+                userId,
+                request.getName(),
+                request.getAge(),
+                request.getSpecies(),
+                request.getGender(),
+                request.getBio(),
+                profileImageKey,
+                0
+        );
         petRepository.save(pet);
     }
 
     @Transactional
     @Override
     public void updatePet(String id, RegisterRequest request, MultipartFile image) {
-        Pet pet = petRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Pet not found: " + id));
+        Pet pet = petRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Pet not found: " + id));
+
+        if (image != null && !image.isEmpty()) {
+            String imageKey = String.format(
+                    "pets/%s/profile/%s",
+                    pet.getId(),
+                    UUID.randomUUID()
+            );
+
+            String storedKey = fileStorageService.upload(image, imageKey);
+            pet.setProfileImageKey(storedKey);
+
+            // option: 이전 이미지 삭제?
+        }
+
         pet.setName(request.getName());
         pet.setAge(request.getAge());
         pet.setSpecies(request.getSpecies());
