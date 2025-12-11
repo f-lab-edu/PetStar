@@ -34,17 +34,7 @@ public class PetServiceImpl implements PetService {
     public void registerPet(RegisterRequest request, MultipartFile image, String userId) {
         String petId = UUID.randomUUID().toString();
 
-        String profileImageKey = null; // todo: 디폴트 이미지?
-
-        if (image != null && !image.isEmpty()) {
-            String imageKey = String.format(
-                    "pets/%s/profile/%s",
-                    petId,
-                    UUID.randomUUID()
-            );
-
-            profileImageKey = fileStorageService.upload(image, imageKey);
-        }
+        String profileImageKey = uploadProfileImageIfPresent(image, petId); // todo: key 값이 null일때 클라이언트에서 디폴트 이미지 불러오기
 
         Pet pet = new Pet(
                 petId,
@@ -66,17 +56,9 @@ public class PetServiceImpl implements PetService {
         Pet pet = petRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Pet not found: " + id));
 
-        if (image != null && !image.isEmpty()) {
-            String imageKey = String.format(
-                    "pets/%s/profile/%s",
-                    pet.getId(),
-                    UUID.randomUUID()
-            );
-
-            String storedKey = fileStorageService.upload(image, imageKey);
-            pet.setProfileImageKey(storedKey);
-
-            // option: 이전 이미지 삭제?
+        String profileImageKey = uploadProfileImageIfPresent(image, pet.getId());
+        if (profileImageKey != null) {
+            pet.setProfileImageKey(profileImageKey);
         }
 
         pet.setName(request.getName());
@@ -91,7 +73,27 @@ public class PetServiceImpl implements PetService {
     public void deletePet(String id) {
         Pet pet = petRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Pet not found:" + id));
-        // TODO: 검증로직
+        // TODO: User 기능 추가 후 검증로직 추가
         petRepository.delete(pet);
+    }
+
+    /**
+     * 이미지가 empty가 아니면 저장하고 key를 반환 하고 없으면 null을 반환합니다.
+     * @param image 클라이언트로 부터 받은 이미지 파일
+     * @param petId 프로필 이미지를 업로드할 펫의 ID
+     * @return 저장된 이미지의 key
+     */
+    private String uploadProfileImageIfPresent(MultipartFile image, String petId) {
+        if (image != null && !image.isEmpty()) {
+            String imageKey = String.format(
+                    "pets/%s/profile/%s",
+                    petId,
+                    UUID.randomUUID()
+            );
+
+            return fileStorageService.upload(image, imageKey);
+        }
+
+        return null;
     }
 }

@@ -10,10 +10,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 
 @Configuration
 public class S3Config {
-    /**
-     * Todo
-     * 1. S3Service를 활용해서 PetService로직 수정
-     */
 
     @Bean
     public S3Client s3Client() {
