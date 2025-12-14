@@ -20,6 +20,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(new ErrorResponse("잘못된 요청 형식입니다.", 400));
     }
 
+    @ExceptionHandler(VideoSourceRequiredException.class)
+    public ResponseEntity<ErrorResponse> handelVideoSourceRequiredException(VideoSourceRequiredException e) {
+        return ResponseEntity.badRequest().body(new ErrorResponse("동영상 파일은 필수입니다.", 400));
+    }
+
     public record ErrorResponse(String message, int status) {
     }
 }
