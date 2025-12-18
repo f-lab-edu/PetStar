@@ -1,14 +1,16 @@
 package com.petstarproject.petstar.service;
 
-import com.petstarproject.petstar.dto.VideoCreateRequest;
-import com.petstarproject.petstar.dto.VideoUpdateRequest;
+import com.petstarproject.petstar.dto.VideoInfoRequest;
 import com.petstarproject.petstar.entity.Video;
 import com.petstarproject.petstar.enums.VideoFileType;
+import com.petstarproject.petstar.enums.Visibility;
 import com.petstarproject.petstar.exception.VideoSourceRequiredException;
 import com.petstarproject.petstar.repository.VideoRepository;
+import com.petstarproject.petstar.service.duration.VideoDurationExtractor;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,21 +30,25 @@ public class VideoServiceImpl implements VideoService {
 
     private final VideoRepository videoRepository;
     private final FileStorageService fileStorageService;
+    private final VideoDurationExtractor videoDurationExtractor; // todo: mp4 제한 없이 FFmpeg로 확장
 
     @Autowired
-    public VideoServiceImpl(VideoRepository videoRepository, FileStorageService fileStorageService) {
+    public VideoServiceImpl(VideoRepository videoRepository, FileStorageService fileStorageService, VideoDurationExtractor videoDurationExtractor) {
         this.videoRepository = videoRepository;
         this.fileStorageService = fileStorageService;
+        this.videoDurationExtractor = videoDurationExtractor;
     }
 
     @Transactional
     @Override
-    public String createVideo(VideoCreateRequest request, MultipartFile videoSource, MultipartFile thumbnail,String petId) {
+    public String createVideo(VideoInfoRequest request, MultipartFile videoSource, MultipartFile thumbnail, String petId, String userId) {
         if (videoSource == null || videoSource.isEmpty()) {
             throw new VideoSourceRequiredException("Video source file is required");
         }
 
         String videoId = UUID.randomUUID().toString();
+
+        int durationSec = videoDurationExtractor.extractDurationSec(videoSource);
 
         String sourceKey = uploadFileIfPresent(videoSource, VideoFileType.VIDEO, videoId);
         String thumbnailKey = uploadFileIfPresent(thumbnail, VideoFileType.THUMBNAIL, videoId);
@@ -50,13 +56,15 @@ public class VideoServiceImpl implements VideoService {
         Video video = Video.create(
                 videoId,
                 petId,
+                userId,
                 request.getTitle(),
                 request.getDescription(),
+                request.getVisibility(),
                 sourceKey,
                 thumbnailKey,
-                0,
+                durationSec,
                 request.getTags()
-        ); // todo: durationSec 계산 해서 넣기
+        );
 
         videoRepository.save(video);
 
@@ -64,9 +72,17 @@ public class VideoServiceImpl implements VideoService {
     }
 
     @Override
-    public Video getVideo(String videoId) {
-        return videoRepository.findById(videoId)
+    public Video getVideo(String videoId, String requesterId) {
+        Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new EntityNotFoundException("video not found: " + videoId));
+
+        if (video.getVisibility() == Visibility.PRIVATE) {
+            if (requesterId == null || !requesterId.equals(video.getOwnerId())) {
+                throw new AccessDeniedException("private video");
+            }
+        }
+
+        return video;
     }
 
     /**
@@ -76,14 +92,14 @@ public class VideoServiceImpl implements VideoService {
      */
     @Transactional
     @Override
-    public void updateVideo(String id, VideoUpdateRequest request, MultipartFile thumbnail) {
+    public void updateVideo(String id, VideoInfoRequest request, MultipartFile thumbnail) {
         Video video = videoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("video not found: " + id));
 
         video.updateMeta(request.getTitle(), request.getDescription(), request.getVisibility(), request.getTags());
 
         String thumbnailKey = uploadFileIfPresent(thumbnail, VideoFileType.THUMBNAIL, id);
-        if (thumbnailKey != null) video.updateThumbnail(thumbnailKey); // todo: S3기능 연동
+        if (thumbnailKey != null) video.updateThumbnail(thumbnailKey);
 
     }
 
