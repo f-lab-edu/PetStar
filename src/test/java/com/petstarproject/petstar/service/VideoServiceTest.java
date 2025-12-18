@@ -1,11 +1,11 @@
 package com.petstarproject.petstar.service;
 
-import com.petstarproject.petstar.dto.VideoCreateRequest;
-import com.petstarproject.petstar.dto.VideoUpdateRequest;
+import com.petstarproject.petstar.dto.VideoInfoRequest;
 import com.petstarproject.petstar.entity.Video;
 import com.petstarproject.petstar.enums.Visibility;
 import com.petstarproject.petstar.exception.VideoSourceRequiredException;
 import com.petstarproject.petstar.repository.VideoRepository;
+import com.petstarproject.petstar.service.duration.VideoDurationExtractor;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -36,6 +37,9 @@ public class VideoServiceTest {
     @Mock
     private FileStorageService fileStorageService;
 
+    @Mock
+    private VideoDurationExtractor videoDurationExtractor;
+
     @InjectMocks
     private VideoServiceImpl videoService;
 
@@ -45,9 +49,11 @@ public class VideoServiceTest {
     void createVideo_success() {
         // given
         String petId = "test_pet_id";
-        VideoCreateRequest req = VideoCreateRequest.builder()
+        String ownerId = "test_owner_id";
+        VideoInfoRequest req = VideoInfoRequest.builder()
                 .title("title")
                 .description("description")
+                .visibility(Visibility.PUBLIC)
                 .tags(List.of("tag1,", "tag2"))
                 .build();
 
@@ -65,7 +71,7 @@ public class VideoServiceTest {
         ArgumentCaptor<Video> captor = ArgumentCaptor.forClass(Video.class);
 
         // when
-        String videoId = videoService.createVideo(req, videoSource, thumbnail, petId);
+        String videoId = videoService.createVideo(req, videoSource, thumbnail, petId, ownerId);
 
         // then
         verify(fileStorageService, times(1)).upload(eq(videoSource), anyString());
@@ -76,6 +82,7 @@ public class VideoServiceTest {
 
         assertThat(videoId).isNotNull();
         assertThat(saved.getPetId()).isEqualTo(petId);
+        assertThat(saved.getOwnerId()).isEqualTo(ownerId);
         assertThat(saved.getSourceKey()).isEqualTo("videos/test_pet_id/source/sourceKey");
         assertThat(saved.getThumbnailKey()).isEqualTo("videos/test_pet_id/thumbnail/thumbnailKey");
     }
@@ -85,9 +92,12 @@ public class VideoServiceTest {
     @DisplayName("source가 없으면 Video 생성 시 VideoSourceRequiredException이 발생하고 저장/업로드가 호출되지 않는다.")
     void createVideo_fail_sourceRequired() {
         // given
-        VideoCreateRequest req = VideoCreateRequest.builder()
+        String petId = "test_pet_id";
+        String ownerId = "test_owner_id";
+        VideoInfoRequest req = VideoInfoRequest.builder()
                 .title("title")
                 .description("description")
+                .visibility(Visibility.PUBLIC)
                 .tags(List.of("tag1,", "tag2"))
                 .build();
 
@@ -95,7 +105,7 @@ public class VideoServiceTest {
         given(emptySource.isEmpty()).willReturn(true);
 
         // when & then
-        assertThatThrownBy(() -> videoService.createVideo(req, emptySource, null, "test_pet_id"))
+        assertThatThrownBy(() -> videoService.createVideo(req, emptySource, null, petId, ownerId))
                 .isInstanceOf(VideoSourceRequiredException.class);
 
         verify(fileStorageService, never()).upload(any(), anyString());
@@ -104,40 +114,110 @@ public class VideoServiceTest {
 
 
     @Test
-    @DisplayName("존재하는 ID로 Video를 조회하면 Video를 반환한다")
-    void getVideo_success() {
+    @DisplayName("PUBLIC Video는 requester가 달라도 조회 가능하다")
+    void getVideo_success_public() {
         // given
-        String id = "test_video_id";
+        String videoId = "test_video_id";
+        String ownerId = "test_owner_id";
+        String requesterId = "test_requester_id";
+
         Video video = Video.create(
-                id,
+                videoId,
                 "test_pet_id",
+                ownerId,
                 "title",
                 "description",
+                Visibility.PUBLIC,
                 "sourceKey",
                 "thumbnailKey",
                 0,
                 List.of("tag")
         );
 
-        given(videoRepository.findById(id)).willReturn(Optional.of(video));
+        given(videoRepository.findById(videoId)).willReturn(Optional.of(video));
 
         // when
-        Video res = videoService.getVideo(id);
+        Video res = videoService.getVideo(videoId, requesterId);
 
         // then
-        assertThat(res.getId()).isEqualTo(id);
-        verify(videoRepository, times(1)).findById(id);
+        assertThat(res.getId()).isEqualTo(videoId);
+        verify(videoRepository, times(1)).findById(videoId);
     }
 
+
     @Test
-    @DisplayName("존재하는 ID로 Video를 조회하면 Video를 반환한다")
+    @DisplayName("PRIVATE Video는 owner만 조회 가능하다 (requester == owner)")
+    void getVideo_success_private_owner() {
+        // given
+        String videoId = "test_video_id";
+        String ownerId = "test_owner_id";
+        String requesterId = ownerId;
+
+        Video video = Video.create(
+                videoId,
+                "test_pet_id",
+                ownerId,
+                "title",
+                "description",
+                Visibility.PRIVATE,
+                "sourceKey",
+                "thumbnailKey",
+                0,
+                List.of("tag")
+        );
+
+        given(videoRepository.findById(videoId)).willReturn(Optional.of(video));
+
+        // when
+        Video res = videoService.getVideo(videoId, requesterId);
+
+        // then
+        assertThat(res.getId()).isEqualTo(videoId);
+        verify(videoRepository, times(1)).findById(videoId);
+    }
+
+
+    @Test
+    @DisplayName("PRIVATE Video는 owner가 아니면 AccessDeniedException을 발생시킨다.")
+    void getVideo_fail_private_notOwner() {
+        // given
+        String videoId = "test_video_id";
+        String ownerId = "test_owner_id";
+        String requesterId = "test_requester_id"; // owner와 다름
+
+        Video video = Video.create(
+                videoId,
+                "test_pet_id",
+                ownerId,
+                "title",
+                "description",
+                Visibility.PRIVATE,
+                "sourceKey",
+                "thumbnailKey",
+                0,
+                List.of("tag")
+        );
+
+        given(videoRepository.findById(videoId)).willReturn(Optional.of(video));
+
+        // when & then
+        assertThatThrownBy(() -> videoService.getVideo(videoId, requesterId))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verify(videoRepository, times(1)).findById(videoId);
+    }
+
+
+    @Test
+    @DisplayName("존재하지 않는 ID로 Video를 조회하면 EntityNotFoundException을 발생시킨다.")
     void getVideo_fail_notFound() {
         // given
         String id = "test_video_id";
+        String requesterId = "test_requester_id";
         given(videoRepository.findById(id)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> videoService.getVideo(id))
+        assertThatThrownBy(() -> videoService.getVideo(id, requesterId))
                 .isInstanceOf(EntityNotFoundException.class);
         verify(videoRepository, times(1)).findById(id);
     }
@@ -153,8 +233,10 @@ public class VideoServiceTest {
         Video video = Video.create(
                 videoId,
                 "test_pet_id",
+                "test_owner_id",
                 "oldTitle",
                 "oldDescription",
+                Visibility.PUBLIC,
                 "sourceKey",
                 "oldThumbnailKey",
                 0,
@@ -163,7 +245,7 @@ public class VideoServiceTest {
 
         given(videoRepository.findById(videoId)).willReturn(Optional.of(video));
 
-        VideoUpdateRequest req = VideoUpdateRequest.builder()
+        VideoInfoRequest req = VideoInfoRequest.builder()
                 .title("newTitle")
                 .description("newDescription")
                 .visibility(Visibility.PRIVATE)
@@ -195,8 +277,10 @@ public class VideoServiceTest {
         Video video = Video.create(
                 videoId,
                 "test_pet_id",
+                "test_owner_id",
                 "oldTitle",
                 "oldDescription",
+                Visibility.PUBLIC,
                 "sourceKey",
                 "oldThumbnailKey",
                 0,
@@ -211,7 +295,7 @@ public class VideoServiceTest {
         given(fileStorageService.upload(eq(thumbnail), anyString()))
                 .willReturn("videos/test_video_id/thumbnail/newThumbKey");
 
-        VideoUpdateRequest req = VideoUpdateRequest.builder()
+        VideoInfoRequest req = VideoInfoRequest.builder()
                 .title("title") // 변경 없어도 됨
                 .build();
 
@@ -234,7 +318,7 @@ public class VideoServiceTest {
         String videoId = "not_exist_id";
         given(videoRepository.findById(videoId)).willReturn(Optional.empty());
 
-        VideoUpdateRequest req = VideoUpdateRequest.builder()
+        VideoInfoRequest req = VideoInfoRequest.builder()
                 .title("newTitle")
                 .build();
 
@@ -256,8 +340,10 @@ public class VideoServiceTest {
         Video video = Video.create(
                 videoId,
                 "test_pet_id",
+                "test_owner_id",
                 "title",
                 "description",
+                Visibility.PUBLIC,
                 "sourceKey",
                 "thumbKey",
                 0,

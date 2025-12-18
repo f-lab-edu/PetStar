@@ -3,6 +3,7 @@ package com.petstarproject.petstar.exception;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -17,12 +18,32 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(JsonConvertException.class)
     public ResponseEntity<ErrorResponse> handleJsonConvertException(JsonConvertException e) {
-        return ResponseEntity.badRequest().body(new ErrorResponse("잘못된 요청 형식입니다.", 400));
+        return ResponseEntity.badRequest().body(new ErrorResponse("잘못된 요청 형식입니다.", HttpStatus.BAD_REQUEST.value()));
     }
 
     @ExceptionHandler(VideoSourceRequiredException.class)
     public ResponseEntity<ErrorResponse> handelVideoSourceRequiredException(VideoSourceRequiredException e) {
-        return ResponseEntity.badRequest().body(new ErrorResponse("동영상 파일은 필수입니다.", 400));
+        return ResponseEntity.badRequest().body(new ErrorResponse("동영상 파일은 필수입니다.", HttpStatus.BAD_REQUEST.value()));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse("접근 권한이 없습니다.", HttpStatus.FORBIDDEN.value()));
+    }
+
+    @ExceptionHandler(InvalidVideoFormatException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidVideoFormat(InvalidVideoFormatException e) {
+        return ResponseEntity.badRequest().body(
+                new ErrorResponse(e.getMessage(), HttpStatus.BAD_REQUEST.value())
+        );
+    }
+
+    @ExceptionHandler(VideoDurationExtractFailedException.class)
+    public ResponseEntity<ErrorResponse> handleDurationExtractFailed(VideoDurationExtractFailedException e) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(
+                new ErrorResponse("동영상 길이 추출에 실패했습니다.", HttpStatus.UNPROCESSABLE_ENTITY.value())
+        );
     }
 
     public record ErrorResponse(String message, int status) {

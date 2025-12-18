@@ -23,6 +23,9 @@ public class Video {
     @Column(name = "pet_id", nullable = false, length = 36)
     private String petId;   // FK
 
+    @Column(name = "owner_id", nullable = false, length = 36)
+    private String ownerId;    // FK
+
     @Column(nullable = false, length = 255)
     private String title;
 
@@ -74,19 +77,24 @@ public class Video {
     public static Video create(
             String id,
             String petId,
+            String ownerId,
             String title,
             String description,
+            Visibility visibility,
             String sourceKey,
             String thumbnailKey,
             int durationSec,
             List<String> tags
     ) {
+
         Video video = new Video();
         video.id = id;
         video.petId = petId;
+        video.ownerId = ownerId;
         video.title = title;
         video.description = description;
-        video.status = VideoStatus.UPLOADING; // todo: Uploading -> Transcoding -> Ready 기능 추가
+        video.status = VideoStatus.UPLOADING; // todo: Uploading -> Ready 기능 추가
+        video.visibility = visibility;
         video.sourceKey = sourceKey;
         video.thumbnailKey = thumbnailKey;
         video.durationSec = durationSec;
