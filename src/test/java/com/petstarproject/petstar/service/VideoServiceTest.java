@@ -14,7 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.access.AccessDeniedException;
+//import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -202,7 +202,7 @@ public class VideoServiceTest {
 
         // when & then
         assertThatThrownBy(() -> videoService.getVideo(videoId, requesterId))
-                .isInstanceOf(AccessDeniedException.class);
+                .isInstanceOf(RuntimeException.class); // todo: SpringSecurity 추가후 AccessDeniedException으로 수정
 
         verify(videoRepository, times(1)).findById(videoId);
     }
@@ -229,11 +229,12 @@ public class VideoServiceTest {
 
         // given
         String videoId = "test_video_id";
+        String ownerId = "test_owner_id";
 
         Video video = Video.create(
                 videoId,
                 "test_pet_id",
-                "test_owner_id",
+                ownerId,
                 "oldTitle",
                 "oldDescription",
                 Visibility.PUBLIC,
@@ -253,7 +254,7 @@ public class VideoServiceTest {
                 .build();
 
         // when
-        videoService.updateVideo(videoId, req, null);
+        videoService.updateVideo(videoId, req, null, ownerId);
 
         // then
         verify(videoRepository, times(1)).findById(videoId);
@@ -273,11 +274,12 @@ public class VideoServiceTest {
     void updateVideo_success_withThumbnail() {
         // given
         String videoId = "test_video_id";
+        String ownerId = "test_owner_id";
 
         Video video = Video.create(
                 videoId,
                 "test_pet_id",
-                "test_owner_id",
+                ownerId,
                 "oldTitle",
                 "oldDescription",
                 Visibility.PUBLIC,
@@ -296,18 +298,55 @@ public class VideoServiceTest {
                 .willReturn("videos/test_video_id/thumbnail/newThumbKey");
 
         VideoInfoRequest req = VideoInfoRequest.builder()
-                .title("title") // 변경 없어도 됨
+                .title("title")
                 .build();
 
 
         // when
-        videoService.updateVideo(videoId, req, thumbnail);
+        videoService.updateVideo(videoId, req, thumbnail, ownerId);
 
         // then
         verify(videoRepository, times(1)).findById(videoId);
         verify(fileStorageService, times(1)).upload(eq(thumbnail), anyString());
 
         assertThat(video.getThumbnailKey()).isEqualTo("videos/test_video_id/thumbnail/newThumbKey");
+    }
+
+
+    @Test
+    @DisplayName("owner가 아닌 사용자가 Video 수정 시 AccessDeniedException이 발생하고 업로드/수정 로직이 실행되지 않는다.")
+    void updateVideo_fail_accessDenied() {
+        // given
+        String videoId = "test_video_id";
+        String ownerId = "test_owner_id";
+
+        Video video = Video.create(
+                videoId,
+                "test_pet_id",
+                ownerId,
+                "oldTitle",
+                "oldDescription",
+                Visibility.PUBLIC,
+                "sourceKey",
+                "oldThumbnailKey",
+                0,
+                List.of("oldTag")
+        );
+
+        given(videoRepository.findById(videoId)).willReturn(Optional.of(video));
+
+        MultipartFile thumbnail = mock(MultipartFile.class);
+
+        VideoInfoRequest req = VideoInfoRequest.builder()
+                .title("title")
+                .build();
+
+        // when & then
+        assertThatThrownBy(() -> videoService.updateVideo(videoId, req, thumbnail, "not_owner_id"))
+                .isInstanceOf(RuntimeException.class); // todo: SpringSecurity 추가후 AccessDeniedException으로 수정
+
+        verify(videoRepository, times(1)).findById(videoId);
+        verify(fileStorageService, never()).upload(any(), anyString());
     }
 
 
@@ -323,7 +362,7 @@ public class VideoServiceTest {
                 .build();
 
         // when & then
-        assertThatThrownBy(() -> videoService.updateVideo(videoId, req, null))
+        assertThatThrownBy(() -> videoService.updateVideo(videoId, req, null, null))
                 .isInstanceOf(EntityNotFoundException.class);
 
         verify(videoRepository, times(1)).findById(videoId);
@@ -336,11 +375,12 @@ public class VideoServiceTest {
     void deleteVideo_success() {
         // given
         String videoId = "test_video_id";
+        String ownerId = "test_owner_id";
 
         Video video = Video.create(
                 videoId,
                 "test_pet_id",
-                "test_owner_id",
+                ownerId,
                 "title",
                 "description",
                 Visibility.PUBLIC,
@@ -353,7 +393,7 @@ public class VideoServiceTest {
         given(videoRepository.findById(videoId)).willReturn(Optional.of(video));
 
         // when
-        videoService.deleteVideo(videoId);
+        videoService.deleteVideo(videoId, ownerId);
 
         //then
         verify(videoRepository, times(1)).findById(videoId);
@@ -362,15 +402,48 @@ public class VideoServiceTest {
 
 
     @Test
+    @DisplayName("owner가 아닌 사용자가 Video 삭제 시 AccessDeniedException이 발생하고 Repository delete는 호출되지 않는다.")
+    void deleteVideo_fail_accessDenied() {
+        // given
+        String videoId = "test_video_id";
+        String ownerId = "test_owner_id";
+
+        Video video = Video.create(
+                videoId,
+                "test_pet_id",
+                ownerId,
+                "title",
+                "description",
+                Visibility.PUBLIC,
+                "sourceKey",
+                "thumbKey",
+                0,
+                List.of()
+        );
+
+        given(videoRepository.findById(videoId)).willReturn(Optional.of(video));
+
+        // when & then
+        assertThatThrownBy(() -> videoService.deleteVideo(videoId, "not_owner_id"))
+                .isInstanceOf(RuntimeException.class); // todo: SpringSecurity 추가후 AccessDeniedException으로 수정
+
+        //then
+        verify(videoRepository, times(1)).findById(videoId);
+        verify(videoRepository, never()).delete(any());
+    }
+
+
+    @Test
     @DisplayName("Video 삭제 시 대상이 없으면 EntityNotFoundException에러가 발생하고 delete는 호출되지 않는다.")
     void deleteVideo_fail_notFound() {
         // given
         String videoId = "test_video_id";
+        String ownerId = "test_owner_id";
 
         given(videoRepository.findById(videoId)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> videoService.deleteVideo(videoId))
+        assertThatThrownBy(() -> videoService.deleteVideo(videoId, ownerId))
                 .isInstanceOf(EntityNotFoundException.class);
 
         verify(videoRepository, times(1)).findById(videoId);

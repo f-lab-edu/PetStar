@@ -14,7 +14,7 @@ public interface VideoService {
 
     Video getVideo(String videoId, String requesterId);
 
-    void updateVideo(String videoId, VideoInfoRequest request, MultipartFile thumbnail);
+    void updateVideo(String videoId, VideoInfoRequest request, MultipartFile thumbnail, String requesterId);
 
-    void deleteVideo(String videoId);
+    void deleteVideo(String videoId, String requesterId);
 }

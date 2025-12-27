@@ -10,7 +10,7 @@ import com.petstarproject.petstar.service.duration.VideoDurationExtractor;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.AccessDeniedException;
+//import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -77,11 +77,8 @@ public class VideoServiceImpl implements VideoService {
                 .orElseThrow(() -> new EntityNotFoundException("video not found: " + videoId));
 
         if (video.getVisibility() == Visibility.PRIVATE) {
-            if (requesterId == null || !requesterId.equals(video.getOwnerId())) {
-                throw new AccessDeniedException("private video");
-            }
+            checkOwner(video.getOwnerId(), requesterId);
         }
-
         return video;
     }
 
@@ -89,13 +86,15 @@ public class VideoServiceImpl implements VideoService {
      * JPA의 dirty-checking 특성을 활용해서 record를 update
      * @param id 동영상의 ID
      * @param request 클라이언트로 부터 전달받은 수정할 메타데이터
+     * @param thumbnail 클라이언트로 부터 전달받은 새 썸네일
      */
     @Transactional
     @Override
-    public void updateVideo(String id, VideoInfoRequest request, MultipartFile thumbnail) {
+    public void updateVideo(String id, VideoInfoRequest request, MultipartFile thumbnail, String requesterId) {
         Video video = videoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("video not found: " + id));
 
+        checkOwner(video.getOwnerId(), requesterId);
         video.updateMeta(request.getTitle(), request.getDescription(), request.getVisibility(), request.getTags());
 
         String thumbnailKey = uploadFileIfPresent(thumbnail, VideoFileType.THUMBNAIL, id);
@@ -105,10 +104,11 @@ public class VideoServiceImpl implements VideoService {
 
     @Transactional
     @Override
-    public void deleteVideo(String videoId) {
+    public void deleteVideo(String videoId, String requesterId) {
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new EntityNotFoundException("video not found: " + videoId));
-        // Todo: 검증로직, S3 삭제
+        checkOwner(video.getOwnerId(), requesterId);
+        // Todo: S3 삭제
         videoRepository.delete(video);
     }
 
@@ -121,5 +121,16 @@ public class VideoServiceImpl implements VideoService {
         };
 
         return fileStorageService.upload(file, fileKey);
+    }
+
+    private void checkOwner(String ownerId, String requesterId) {
+        if (requesterId == null || requesterId.isBlank()) {
+            throw new RuntimeException("인증이 필요합니다."); // SpringSecurity 추가 전 임시 코드
+//            throw new AccessDeniedException("authentication required");
+        }
+        if (!requesterId.equals(ownerId)) {
+            throw new RuntimeException("본인이 만든 동영상이 아닙니다."); // SpringSecurity 추가 전 임시 코드
+//            throw new AccessDeniedException("not owner");
+        }
     }
 }

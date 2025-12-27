@@ -54,7 +54,7 @@ public class S3FileStorageService implements FileStorageService{
             return key;
 
         } catch (IOException e) {
-            throw new FileStorageException("파일 업로드 중 오류가 발생했습니다.");
+            throw new FileStorageException("파일 업로드 중 오류가 발생했습니다.", e);
         }
 
     }
