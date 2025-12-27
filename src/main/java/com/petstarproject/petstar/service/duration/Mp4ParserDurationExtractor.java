@@ -10,9 +10,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 
 @Component
@@ -47,7 +49,9 @@ public class Mp4ParserDurationExtractor implements VideoDurationExtractor{
     private Path saveToTempFile(MultipartFile file, String suffix) {
         try {
             Path temp = Files.createTempFile("upload-", suffix);
-            file.transferTo(temp.toFile());
+            try (InputStream in = file.getInputStream()) {
+                Files.copy(in, temp, StandardCopyOption.REPLACE_EXISTING);
+            }
             return temp;
         } catch (IOException e) {
             throw new VideoDurationExtractFailedException("Failed to save temp file", e);

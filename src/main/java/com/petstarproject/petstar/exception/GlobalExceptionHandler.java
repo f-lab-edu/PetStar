@@ -3,7 +3,7 @@ package com.petstarproject.petstar.exception;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
+//import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -26,11 +26,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(new ErrorResponse("동영상 파일은 필수입니다.", HttpStatus.BAD_REQUEST.value()));
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(new ErrorResponse("접근 권한이 없습니다.", HttpStatus.FORBIDDEN.value()));
-    }
+//    @ExceptionHandler(AccessDeniedException.class)
+//    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e) {
+//        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+//                .body(new ErrorResponse("접근 권한이 없습니다.", HttpStatus.FORBIDDEN.value()));
+//    }
 
     @ExceptionHandler(InvalidVideoFormatException.class)
     public ResponseEntity<ErrorResponse> handleInvalidVideoFormat(InvalidVideoFormatException e) {
