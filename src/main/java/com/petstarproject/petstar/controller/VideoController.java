@@ -37,12 +37,8 @@ public class VideoController {
                                          @RequestPart("videoSource") MultipartFile videoSource,
                                          @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail,
                                          @RequestParam("petId") String petId,
-                                         @RequestHeader(value = "X-REQUESTER-ID", required = false) String requesterId
+                                         @RequestHeader(value = "X-REQUESTER-ID") String requesterId
     ) {
-
-        if (requesterId == null || requesterId.isBlank()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
 
         String videoId = videoService.createVideo(info, videoSource, thumbnail, petId, requesterId);
         return ResponseEntity.status(HttpStatus.CREATED).body(new MessageResponse(videoId));
@@ -54,11 +50,8 @@ public class VideoController {
             @PathVariable String videoId,
             @RequestPart("info") @Valid VideoInfoRequest info,
             @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnail,
-            @RequestHeader(value = "X-REQUESTER-ID", required = false) String requesterId
+            @RequestHeader(value = "X-REQUESTER-ID") String requesterId
     ) {
-        if (requesterId == null || requesterId.isBlank()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
 
         videoService.updateVideo(videoId, info, thumbnail, requesterId);
         return ResponseEntity.noContent().build();
@@ -67,10 +60,7 @@ public class VideoController {
 
     @DeleteMapping("/{videoId}")
     public ResponseEntity<?> deleteVideo(@PathVariable String videoId,
-                                         @RequestHeader(value = "X-REQUESTER-ID", required = false) String requesterId) {
-        if (requesterId == null || requesterId.isBlank()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+                                         @RequestHeader(value = "X-REQUESTER-ID") String requesterId) {
 
         videoService.deleteVideo(videoId, requesterId);
         return ResponseEntity.noContent().build();

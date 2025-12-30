@@ -25,7 +25,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handelVideoSourceRequiredException(VideoSourceRequiredException e) {
         return ResponseEntity.badRequest().body(new ErrorResponse("동영상 파일은 필수입니다.", HttpStatus.BAD_REQUEST.value()));
     }
-
+// todo: SpringSecurity 도입후 코드 재사용
 //    @ExceptionHandler(AccessDeniedException.class)
 //    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e) {
 //        return ResponseEntity.status(HttpStatus.FORBIDDEN)
