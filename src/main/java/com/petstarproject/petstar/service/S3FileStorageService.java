@@ -6,7 +6,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
 
@@ -57,5 +59,25 @@ public class S3FileStorageService implements FileStorageService{
             throw new FileStorageException("파일 업로드 중 오류가 발생했습니다.", e);
         }
 
+    }
+
+    /**
+     * 지정된 key의 객체를 S3 버킷에서 삭제합니다.
+     *
+     * @param key 삭제할 S3 객체 key
+     * @throws FileStorageException 삭제 중 오류가 발생한 경우
+     */
+    @Override
+    public void delete(String key) {
+        try {
+            DeleteObjectRequest request = DeleteObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .build();
+
+            s3Client.deleteObject(request);
+        } catch (S3Exception e) {
+            throw new FileStorageException("파일 삭제 중 오류가 발생했습니다.", e);
+        }
     }
 }

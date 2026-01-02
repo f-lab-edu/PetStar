@@ -27,8 +27,8 @@ public class VideoResponse {
     private LocalDateTime publishedAt;
 
     public static VideoResponse from(Video video) {
-        return VideoResponse.builder().
-                id(video.getId())
+        return VideoResponse.builder()
+                .id(video.getId())
                 .petId(video.getPetId())
                 .ownerId(video.getOwnerId())
                 .title(video.getTitle())
