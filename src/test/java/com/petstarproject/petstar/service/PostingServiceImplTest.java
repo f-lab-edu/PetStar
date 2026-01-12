@@ -306,8 +306,7 @@ class PostingServiceImplTest {
         postingService.deletePosting("p1", "owner");
 
         // then
-        verify(fileStorageService, times(1)).delete("k1");
-        verify(fileStorageService, times(1)).delete("k2");
+        verify(fileStorageService, times(1)).deleteAll(eq(List.of("k1", "k2")));
         verify(postingRepository, times(1)).delete(posting);
     }
 
