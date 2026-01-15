@@ -46,6 +46,13 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(DuplicatedEmailException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateEmail(DuplicatedEmailException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                new ErrorResponse(e.getMessage(), HttpStatus.CONTINUE.value())
+        );
+    }
+
     public record ErrorResponse(String message, int status) {
     }
 }
