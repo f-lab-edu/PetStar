@@ -25,7 +25,20 @@ public class PostingResponse {
     private LocalDateTime publishedAt;
 
     public static PostingResponse from(Posting posting) {
-        return PostingResponse.builder().build();
+        return PostingResponse.builder()
+                .id(posting.getId())
+                .petId(posting.getPetId())
+                .ownerId(posting.getOwnerId())
+                .title(posting.getTitle())
+                .content(posting.getContent())
+                .visibility(posting.getVisibility())
+                .likeCount(posting.getLikeCount())
+                .commentCount(posting.getCommentCount())
+                .imageKeys(posting.getImageKeys())
+                .createdAt(posting.getCreatedAt())
+                .updatedAt(posting.getUpdatedAt())
+                .publishedAt(posting.getPublishedAt())
+                .build();
     }
 
 }
