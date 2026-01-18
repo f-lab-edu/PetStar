@@ -1,16 +1,16 @@
 package com.petstarproject.petstar.service;
 
 import com.petstarproject.petstar.exception.FileStorageException;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
-import java.util.List;
 
 /**
  * AWS S3에 파일을 업로드하는 {@link FileStorageService} 구현체입니다.
@@ -19,7 +19,6 @@ import java.util.List;
  * S3 버킷에 객체(파일)를 저장합니다. 업로드가 성공하면 해당 key를 반환하며,
  * 업로드 과정에서 IOException이 발생할 경우 {@link FileStorageException}을 발생시킵니다.</p>
  */
-@Slf4j
 @Service
 public class S3FileStorageService implements FileStorageService{
 
@@ -79,38 +78,6 @@ public class S3FileStorageService implements FileStorageService{
             s3Client.deleteObject(request);
         } catch (S3Exception e) {
             throw new FileStorageException("파일 삭제 중 오류가 발생했습니다.", e);
-        }
-    }
-
-    @Override
-    public void deleteAll(List<String> keys) {
-        if (keys == null || keys.isEmpty()) return;
-
-        try {
-            List<ObjectIdentifier> objects = keys.stream()
-                    .map(k -> ObjectIdentifier.builder().key(k).build())
-                    .toList();
-
-            Delete delete = Delete.builder()
-                    .objects(objects)
-                    .build();
-
-            DeleteObjectsRequest request = DeleteObjectsRequest.builder()
-                    .bucket(bucket)
-                    .delete(delete)
-                    .build();
-
-            DeleteObjectsResponse response = s3Client.deleteObjects(request);
-
-            // 부분 실패 처리
-            if (response.hasErrors() && !response.errors().isEmpty()) {
-                for (S3Error err : response.errors()) {
-                    log.warn("S3 배치 삭제 실패: key={}, code={}, message={}",
-                            err.key(), err.code(), err.message());
-                }
-            }
-        } catch (S3Exception e) {
-            throw new FileStorageException("파일 일괄 삭제 중 오류가 발생했습니다.", e);
         }
     }
 }
