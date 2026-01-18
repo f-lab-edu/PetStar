@@ -1,20 +1,20 @@
 package com.petstarproject.petstar.service;
 
 import com.petstarproject.petstar.dto.PostingRequest;
+import com.petstarproject.petstar.dto.PostingResponse;
 import com.petstarproject.petstar.entity.Posting;
+import com.petstarproject.petstar.entity.Video;
 import com.petstarproject.petstar.enums.Visibility;
 import com.petstarproject.petstar.repository.PostingRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@Service
 public class PostingServiceImpl implements PostingService {
 
     private final PostingRepository postingRepository;
