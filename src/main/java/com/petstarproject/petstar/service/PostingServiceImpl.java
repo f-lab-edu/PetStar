@@ -6,7 +6,6 @@ import com.petstarproject.petstar.enums.Visibility;
 import com.petstarproject.petstar.repository.PostingRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,7 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@Slf4j
 @Service
 public class PostingServiceImpl implements PostingService {
 
@@ -66,10 +64,7 @@ public class PostingServiceImpl implements PostingService {
         } catch (RuntimeException e) {
             // 업로드된 파일이 있다면 보상 삭제(롤백)
             for (String key : uploadedKeys) {
-                try { fileStorageService.delete(key); }
-                catch (Exception deleteEx) {
-                    log.warn("임시저장 이미지 삭제 실패: postingId={}, key={}", postingId, key, deleteEx);
-                }
+                try { fileStorageService.delete(key); } catch (Exception ignored) {}
             }
             throw e;
         }
@@ -115,8 +110,9 @@ public class PostingServiceImpl implements PostingService {
         checkOwner(posting.getOwnerId(), requesterId);
 
         // s3 이미지 삭제
-        fileStorageService.deleteAll(posting.getImageKeys());
-
+        for (String key : posting.getImageKeys()) {
+            try { fileStorageService.delete(key); } catch (Exception ignored) {}
+        }
         // 엔티티 삭제
         postingRepository.delete(posting);
     }
